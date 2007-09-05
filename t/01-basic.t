@@ -4,7 +4,7 @@ use warnings;
 use FindBin;
 use lib "$FindBin::Bin/../t/lib";
 
-use Test::More tests => 9;
+use Test::More tests => 10;
 
 BEGIN { 
   use_ok 'WWW::Mechanize::TreeBuilder';

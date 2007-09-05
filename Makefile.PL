@@ -1,8 +1,7 @@
-use inc::Module::Install '0.67';
+use inc::Module::Install;
 
 name            'WWW-Mechanize-TreeBuilder';
 all_from        'lib/WWW/Mechanize/TreeBuilder.pm';
-license         'perl';
 
 requires        'perl'                           => '5.8.1';
 requires        'Moose';

@@ -27,7 +27,7 @@ WWW::Mechanize::TreeBuilder
 This module combines WWW::Mechanize and HTML::TreeBuilder. Why? Because I've 
 seen too much code like the following:
 
- like($mech->content, qr/<p>some text</p>/, "Found the right tag");
+ like($mech->content, qr{<p>some text</p>}, "Found the right tag");
 
 Which is just all flavours of wrong - its akin to processing XML with regexps.
 Instead, do it like the following:
@@ -53,7 +53,7 @@ all public methods from L<HTML::Element>.
 use Moose::Role;
 use HTML::TreeBuilder;
 
-our $VERSION = 1.00000;
+our $VERSION = 1.00001;
 
 requires '_make_request';
 
