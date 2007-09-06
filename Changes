@@ -1,0 +1,11 @@
+Changelog for WWW::Mechanize::TreeBuilder
+
+1.00002 - 2007 Sep 6
+  - Fix Makefile.PL so that HTML::TreeBuilder is a dependancy, not just 
+    recomended - oops.
+
+1.00001 - 2007 Sep 5
+  - I can't count - fix test count.
+
+1.00000 - 2007 Sep 4
+  - Initial Release

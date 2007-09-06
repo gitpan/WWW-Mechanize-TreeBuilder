@@ -53,7 +53,7 @@ all public methods from L<HTML::Element>.
 use Moose::Role;
 use HTML::TreeBuilder;
 
-our $VERSION = 1.00001;
+our $VERSION = '1.00002';
 
 requires '_make_request';
 
