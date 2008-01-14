@@ -27,6 +27,8 @@ sub _make_request {
 EOF
   } elsif ($req->uri eq '/plain') {
    $res =  HTTP::Response->new(200, 'OK', ['Content-Type' => 'text/plain'], "I'm plain text");
+  } elsif ($req->uri eq '/image') {
+   $res =  HTTP::Response->new(200, 'OK', ['Content-Type' => 'image/gif'], "I should be an image");
   }
  
   $res->request($req);

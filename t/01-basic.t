@@ -4,7 +4,7 @@ use warnings;
 use FindBin;
 use lib "$FindBin::Bin/../t/lib";
 
-use Test::More tests => 10;
+use Test::More tests => 12;
 
 BEGIN { 
   use_ok 'WWW::Mechanize::TreeBuilder';
@@ -25,6 +25,9 @@ is($mech->look_down(_tag => 'p')->as_trimmed_text, 'A para', "Got the right <p> 
 
 isa_ok($mech->find('h1'), 'HTML::Element', 'Can find an H1 tag');
 like($mech->find('title')->as_trimmed_text, qr/\x{2603}/, 'Copes properly with utf8 encoded data'); # Snowman utf8 test
+
+$mech->get_ok('/image', "Get image okay");
+ok(!$mech->has_tree, "No tree for an image request");
 
 $mech->get_ok('/plain', "Request plain text resource");
 

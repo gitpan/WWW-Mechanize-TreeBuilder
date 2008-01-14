@@ -46,14 +46,17 @@ Moose.
 =head1 METHODS
 
 Everything in L<WWW::Mechanize> (or which ever sub class you apply it to) and
-all public methods from L<HTML::Element>.
+all public methods from L<HTML::Element> except those which WWW::Mechanize
+and HTML::Element give this method. In the case where WWW::Mechanize and 
+HTML::TreeBuilder boht define a method, the one from WWW::Mechanize will be 
+used (so that the behaviour of Mechanize wont get broken.)
 
 =cut
 
 use Moose::Role;
 use HTML::TreeBuilder;
 
-our $VERSION = '1.00002';
+our $VERSION = '1.00003';
 
 requires '_make_request';
 
@@ -73,7 +76,7 @@ has 'tree' => (
 
     return 
       map  { $_ => $_ }
-      grep { !/^_/ } $delegate_class->list_all_package_symbols('CODE'); 
+      grep { !/^_/ && !$class->can($_) } $delegate_class->list_all_package_symbols('CODE'); 
   }
 );
 

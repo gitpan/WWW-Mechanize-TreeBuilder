@@ -1,5 +1,8 @@
 Changelog for WWW::Mechanize::TreeBuilder
 
+1.00003 - 2008 Jan 14
+  - Fix delegation of 'clone' and other methods that already exist on Mechanize
+
 1.00002 - 2007 Sep 6
   - Fix Makefile.PL so that HTML::TreeBuilder is a dependancy, not just 
     recomended - oops.
