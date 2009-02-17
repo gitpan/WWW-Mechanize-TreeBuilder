@@ -34,49 +34,133 @@ Instead, do it like the following:
 
  ok($mech->look_down(_tag => 'p', sub { $_[0]->as_trimmed_text eq 'some text' })
 
-The anon-sub there is a bit icky, but this means that if the p tag should 
-happen to add attributes to the C<< <p> >> tag (such as an id or a class) it
-will still work and find the right tag.
+The anon-sub there is a bit icky, but this means that anyone should happen to
+add attributes to the C<< <p> >> tag (such as an id or a class) it will still
+work and find the right tag.
 
 All of the methods avaiable on L<HTML::Element> (that aren't 'private' - i.e. 
-everything that doesn't begin with an underscore) such as C<look_down> or 
-C<find> are automatically delegated to C<< $mech->tree >> through the magic of
-Moose.
+that don't begin with an underscore) such as C<look_down> or C<find> are
+automatically delegated to C<< $mech->tree >> through the magic of Moose.
 
 =head1 METHODS
 
 Everything in L<WWW::Mechanize> (or which ever sub class you apply it to) and
-all public methods from L<HTML::Element> except those which WWW::Mechanize
-and HTML::Element give this method. In the case where WWW::Mechanize and 
-HTML::TreeBuilder boht define a method, the one from WWW::Mechanize will be 
-used (so that the behaviour of Mechanize wont get broken.)
+all public methods from L<HTML::Element> except those where WWW::Mechanize and
+HTML::Element overlap. In the case where the two classes both define a method,
+the one from WWW::Mechanize will be used (so that the existing behaviour of
+Mechanize doesn't break.)
+
+=head1 USING XPATH OR OTHER SUBCLASSES
+
+L<HTML::TreeBuilder::XPath> allows you to use use xpath selectors to select
+elements in the tree. You can use that module by providing parameters to the
+moose role:
+
+ with 'WWW::Mechanize::TreeBuilder' => {
+   tree_class => 'HTML::TreeBuilder::XPath'
+ };
+
+ # or
+ 
+ WWW::Mechanize::TreeBuilder->meta->apply($mech, {
+   tree_class => 'HTML::TreeBuilder::XPath';
+ } );
+
+and class will be automatically loaded for you. This class will be used to
+construct the tree in the following manner:
+
+ $tree = $tree_class->new_from_content($req->decoded_content)->elementify;
+
+You can also specify a C<element_class> parameter which is the (HTML::Element
+sub)class that methods are proxied from. This module provides defaults for
+element_class when C<tree_class> is "HTML::TreeBuilder" or
+"HTML::TreeBuilder::XPath" - it will warn otherwise.
 
 =cut
 
-use Moose::Role;
-use HTML::TreeBuilder;
+use MooseX::Role::Parameterized;
+use Moose::Util::TypeConstraints;
+#use HTML::TreeBuilder;
 
-our $VERSION = '1.00003';
+subtype 'WWW.Mechanize.TreeBuilder.LoadClass'
+  => as 'Str'
+  => where { Class::MOP::load_class($_) }
+  => message { "Cannot load class $_" };
+
+subtype 'WWW.Mechanize.TreeBuilder.TreeClass'
+  => as 'WWW.Mechanize.TreeBuilder.LoadClass'
+  => where { $_->isa('HTML::TreeBuilder') }
+  => message { "$_ isn't a subclass of HTML::TreeBuilder (or it can't be loaded)" };
+
+subtype 'WWW.Mechanize.TreeBuilder.ElementClass'
+  => as 'WWW.Mechanize.TreeBuilder.LoadClass',
+  => where { $_->isa('HTML::Element') }
+  => message { "$_ isn't a subclass of HTML::Element (or it can't be loaded)" };
+
+our $VERSION = '1.10000';
+
+parameter tree_class => (
+  isa => 'WWW.Mechanize.TreeBuilder.TreeClass',
+  required => 1,
+  default => 'HTML::TreeBuilder',
+);
+
+parameter element_class => (
+  isa => 'WWW.Mechanize.TreeBuilder.ElementClass',
+  lazy => 1,
+  default => 'HTML::Element',
+  predicate => 'has_element_class'
+);
+
+# Used if element_class is not provided to give sane defaults
+our %ELEMENT_CLASS_MAPPING = (
+  'HTML::TreeBuilder' => 'HTML::Element',
+
+  # HTML::TreeBuilder::XPath does it wrong.
+  #'HTML::TreeBuilder::XPath' => 'HTML::TreeBuilder::XPath::Node'
+  'HTML::TreeBuilder::XPath' => 'HTML::Element'
+);
+
+role {
+  my $p = shift;
+
+  my $tree_class = $p->tree_class;
+  my $ele_class;
+  unless ($p->has_element_class) {
+    $ele_class = $ELEMENT_CLASS_MAPPING{$tree_class};
+
+    if (!defined( $ele_class ) ) {
+      local $Carp::Internal{'MooseX::Role::Parameterized::Meta::Role::Parameterizable'} = 1;
+      Carp::carp "WWW::Mechanize::TreeBuilder element_class not specified for overridden tree_class of $tree_class";
+      $ele_class = "HTML::Element";
+    }
+
+  } else {
+    $ele_class = $p->element_class;
+  }
 
 requires '_make_request';
 
 has 'tree' => ( 
   is        => 'ro', 
-  isa       => 'HTML::Element',
+  isa       => $ele_class,
   writer    => '_set_tree',
   predicate => 'has_tree',
   clearer   => 'clear_tree',
-  default   => undef,
 
   # Since HTML::Element isn't a moose object, i have to 'list' everything I 
   # want it to handle myself here. how annoying. But since I'm lazy, I'll just
   # take all subs from the symbol table that dont start with a _
   handles => sub {
-    my ($class, $delegate_class) = @_;
+    my ($attr, $delegate_class) = @_;
+
+    my %methods = map { $_->name => 1 
+      } $attr->associated_class->get_all_methods;
 
     return 
-      map  { $_ => $_ }
-      grep { !/^_/ && !$class->can($_) } $delegate_class->list_all_package_symbols('CODE'); 
+      map  { $_->name => $_->name }
+      grep { my $n = $_->name; $n !~ /^_/ && !$methods{$n} } 
+        $delegate_class->get_all_methods;
   }
 );
 
@@ -92,7 +176,7 @@ around '_make_request' => sub {
   }
 
   if ($ret->content_type =~ m[^(text/html|application/(?:.*?\+)xml)]) {
-    $self->_set_tree( HTML::TreeBuilder->new_from_content($ret->decoded_content)->elementify );
+    $self->_set_tree( $tree_class->new_from_content($ret->decoded_content)->elementify );
   } 
   
   return $ret;
@@ -102,6 +186,11 @@ sub DEMOLISH {
   my $self = shift;
   $self->tree->delete if $self->has_tree;
 }
+
+};
+
+no Moose::Util::TypeConstraints;
+no MooseX::Role::Parameterized;
 
 =head1 AUTHOR
 

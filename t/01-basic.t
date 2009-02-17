@@ -4,7 +4,7 @@ use warnings;
 use FindBin;
 use lib "$FindBin::Bin/../t/lib";
 
-use Test::More tests => 12;
+use Test::More tests => 14;
 
 BEGIN { 
   use_ok 'WWW::Mechanize::TreeBuilder';
@@ -13,11 +13,24 @@ BEGIN {
 
 my $mech = MockMechanize->new;
 
-WWW::Mechanize::TreeBuilder->meta->apply($mech);
+WWW::Mechanize::TreeBuilder->meta->apply( $mech );
+
+# Check that the clone come from WWW::Mech, not HTML::TreeBuilder
+my @meths = $mech->meta->find_all_methods_by_name('clone');
+
+is( 
+  grep( { $_->{code}{delegate_to_method} }  $mech->meta->find_all_methods_by_name('clone')),
+  0,
+  "clone not delegated to tree"
+);
 
 $mech->get_ok('/', 'Request ok');
 
+# Check we can use normal TWMC methods
+$mech->content_contains('A para');
+
 ok($mech->has_tree, 'We have a HTML tree');
+
 
 isa_ok($mech->tree, 'HTML::Element');
 
