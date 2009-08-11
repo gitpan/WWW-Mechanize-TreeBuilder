@@ -3,9 +3,12 @@ abstract: ~
 author:
   - 'Ash Berlin C<< <ash@cpan.org> >>'
 build_requires:
+  ExtUtils::MakeMaker: 6.42
   Test::More: 0
+configure_requires:
+  ExtUtils::MakeMaker: 6.42
 distribution_type: module
-generated_by: 'Module::Install version 0.790'
+generated_by: 'Module::Install version 0.91'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -25,4 +28,5 @@ requires:
   perl: 5.8.1
 resources:
   license: http://dev.perl.org/licenses/
-version: 1.10000
+  repository: http://github.com/ashb/WWW-Mechanize-TreeBuilder
+version: 1.10001

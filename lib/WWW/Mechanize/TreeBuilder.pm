@@ -8,23 +8,24 @@ WWW::Mechanize::TreeBuilder
 
  use Test::More tests => 2;
  use Test::WWW::Mechanize;
+ use WWW::Mechanize::TreeBuilder;
  # or 
  # use WWW::Mechanize;
  # or 
  # use Test::WWW::Mechanize::Catalyst 'MyApp';
 
- my $mech = WWW::Mechanize->new;
+ my $mech = Test::WWW::Mechanize->new;
  # or
  #my $mech = Test::WWW::Mechanize::Catalyst->new;
  # etc. etc.
  WWW::Mechanize::TreeBuilder->meta->apply($mech);
 
  $mech->get_ok('/');
- ok( $mech->look_down(_tag => 'p')->as_trimmed_text, 'Some text', 'It worked' );
+ is( $mech->look_down(_tag => 'p')->as_trimmed_text, 'Some text', 'It worked' );
 
 =head1 DESCRIPTION
 
-This module combines WWW::Mechanize and HTML::TreeBuilder. Why? Because I've 
+This module combines L<WWW::Mechanize> and L<HTML::TreeBuilder>. Why? Because I've 
 seen too much code like the following:
 
  like($mech->content, qr{<p>some text</p>}, "Found the right tag");
@@ -97,7 +98,7 @@ subtype 'WWW.Mechanize.TreeBuilder.ElementClass'
   => where { $_->isa('HTML::Element') }
   => message { "$_ isn't a subclass of HTML::Element (or it can't be loaded)" };
 
-our $VERSION = '1.10000';
+our $VERSION = '1.10001';
 
 parameter tree_class => (
   isa => 'WWW.Mechanize.TreeBuilder.TreeClass',
