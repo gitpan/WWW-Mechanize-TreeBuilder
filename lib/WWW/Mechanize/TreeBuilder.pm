@@ -2,7 +2,7 @@ package WWW::Mechanize::TreeBuilder;
 
 =head1 NAME
 
-WWW::Mechanize::TreeBuilder
+WWW::Mechanize::TreeBuilder - combine WWW::Mechanize and HTML::TreeBuilder in nice ways
 
 =head1 SYNOPSIS
 
@@ -39,7 +39,7 @@ The anon-sub there is a bit icky, but this means that anyone should happen to
 add attributes to the C<< <p> >> tag (such as an id or a class) it will still
 work and find the right tag.
 
-All of the methods avaiable on L<HTML::Element> (that aren't 'private' - i.e. 
+All of the methods available on L<HTML::Element> (that aren't 'private' - i.e. 
 that don't begin with an underscore) such as C<look_down> or C<find> are
 automatically delegated to C<< $mech->tree >> through the magic of Moose.
 
@@ -53,7 +53,7 @@ Mechanize doesn't break.)
 
 =head1 USING XPATH OR OTHER SUBCLASSES
 
-L<HTML::TreeBuilder::XPath> allows you to use use xpath selectors to select
+L<HTML::TreeBuilder::XPath> allows you to use xpath selectors to select
 elements in the tree. You can use that module by providing parameters to the
 moose role:
 
@@ -82,11 +82,12 @@ element_class when C<tree_class> is "HTML::TreeBuilder" or
 
 use MooseX::Role::Parameterized;
 use Moose::Util::TypeConstraints;
+use Class::Load 'load_class';
 #use HTML::TreeBuilder;
 
 subtype 'WWW.Mechanize.TreeBuilder.LoadClass'
   => as 'Str'
-  => where { Class::MOP::load_class($_) }
+  => where { load_class($_) }
   => message { "Cannot load class $_" };
 
 subtype 'WWW.Mechanize.TreeBuilder.TreeClass'
@@ -99,7 +100,7 @@ subtype 'WWW.Mechanize.TreeBuilder.ElementClass'
   => where { $_->isa('HTML::Element') }
   => message { "$_ isn't a subclass of HTML::Element (or it can't be loaded)" };
 
-our $VERSION = '1.10003';
+our $VERSION = '1.20000';
 
 parameter tree_class => (
   isa => 'WWW.Mechanize.TreeBuilder.TreeClass',
@@ -152,12 +153,15 @@ has 'tree' => (
 
   # Since HTML::Element isn't a moose object, i have to 'list' everything I 
   # want it to handle myself here. how annoying. But since I'm lazy, I'll just
-  # take all subs from the symbol table that dont start with a _
+  # take all subs from the symbol table that don't start with a _
   handles => sub {
     my ($attr, $delegate_class) = @_;
 
     my %methods = map { $_->name => 1 
       } $attr->associated_class->get_all_methods;
+
+    # Never delegate the 'import' method
+    $methods{import} = 1;
 
     return 
       map  { $_->name => $_->name }
@@ -184,10 +188,12 @@ around '_make_request' => sub {
   return $ret;
 };
 
-sub DEMOLISH {
+sub DESTROY {}
+
+after DESTROY => sub {
   my $self = shift;
-  $self->tree->delete if $self->has_tree;
-}
+  $self->tree->delete if ($self->has_tree && $self->tree);
+};
 
 };
 

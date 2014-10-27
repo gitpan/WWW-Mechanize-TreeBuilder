@@ -17,12 +17,11 @@ package Module::Install;
 #     3. The ./inc/ version of Module::Install loads
 # }
 
-use 5.005;
+use 5.006;
 use strict 'vars';
 use Cwd        ();
 use File::Find ();
 use File::Path ();
-use FindBin;
 
 use vars qw{$VERSION $MAIN};
 BEGIN {
@@ -32,7 +31,7 @@ BEGIN {
 	# This is not enforced yet, but will be some time in the next few
 	# releases once we can make sure it won't clash with custom
 	# Module::Install extensions.
-	$VERSION = '0.97';
+	$VERSION = '1.14';
 
 	# Storage for the pseudo-singleton
 	$MAIN    = undef;
@@ -157,10 +156,10 @@ END_DIE
 sub autoload {
 	my $self = shift;
 	my $who  = $self->_caller;
-	my $cwd  = Cwd::cwd();
+	my $cwd  = Cwd::getcwd();
 	my $sym  = "${who}::AUTOLOAD";
 	$sym->{$cwd} = sub {
-		my $pwd = Cwd::cwd();
+		my $pwd = Cwd::getcwd();
 		if ( my $code = $sym->{$pwd} ) {
 			# Delegate back to parent dirs
 			goto &$code unless $cwd eq $pwd;
@@ -231,11 +230,16 @@ sub preload {
 sub new {
 	my ($class, %args) = @_;
 
-	FindBin->again;
+	delete $INC{'FindBin.pm'};
+	{
+		# to suppress the redefine warning
+		local $SIG{__WARN__} = sub {};
+		require FindBin;
+	}
 
 	# ignore the prefix on extension modules built from top level.
 	my $base_path = Cwd::abs_path($FindBin::Bin);
-	unless ( Cwd::abs_path(Cwd::cwd()) eq $base_path ) {
+	unless ( Cwd::abs_path(Cwd::getcwd()) eq $base_path ) {
 		delete $args{prefix};
 	}
 	return $args{_self} if $args{_self};
@@ -334,7 +338,7 @@ sub find_extensions {
 		if ( $subpath eq lc($subpath) || $subpath eq uc($subpath) ) {
 			my $content = Module::Install::_read($subpath . '.pm');
 			my $in_pod  = 0;
-			foreach ( split //, $content ) {
+			foreach ( split /\n/, $content ) {
 				$in_pod = 1 if /^=\w/;
 				$in_pod = 0 if /^=cut/;
 				next if ($in_pod || /^=cut/);  # skip pod text
@@ -374,6 +378,7 @@ eval( $] >= 5.006 ? <<'END_NEW' : <<'END_OLD' ); die $@ if $@;
 sub _read {
 	local *FH;
 	open( FH, '<', $_[0] ) or die "open($_[0]): $!";
+	binmode FH;
 	my $string = do { local $/; <FH> };
 	close FH or die "close($_[0]): $!";
 	return $string;
@@ -382,6 +387,7 @@ END_NEW
 sub _read {
 	local *FH;
 	open( FH, "< $_[0]"  ) or die "open($_[0]): $!";
+	binmode FH;
 	my $string = do { local $/; <FH> };
 	close FH or die "close($_[0]): $!";
 	return $string;
@@ -412,6 +418,7 @@ eval( $] >= 5.006 ? <<'END_NEW' : <<'END_OLD' ); die $@ if $@;
 sub _write {
 	local *FH;
 	open( FH, '>', $_[0] ) or die "open($_[0]): $!";
+	binmode FH;
 	foreach ( 1 .. $#_ ) {
 		print FH $_[$_] or die "print($_[0]): $!";
 	}
@@ -421,6 +428,7 @@ END_NEW
 sub _write {
 	local *FH;
 	open( FH, "> $_[0]"  ) or die "open($_[0]): $!";
+	binmode FH;
 	foreach ( 1 .. $#_ ) {
 		print FH $_[$_] or die "print($_[0]): $!";
 	}
@@ -430,7 +438,7 @@ END_OLD
 
 # _version is for processing module versions (eg, 1.03_05) not
 # Perl versions (eg, 5.8.1).
-sub _version ($) {
+sub _version {
 	my $s = shift || 0;
 	my $d =()= $s =~ /(\.)/g;
 	if ( $d >= 2 ) {
@@ -446,12 +454,12 @@ sub _version ($) {
 	return $l + 0;
 }
 
-sub _cmp ($$) {
-	_version($_[0]) <=> _version($_[1]);
+sub _cmp {
+	_version($_[1]) <=> _version($_[2]);
 }
 
 # Cloned from Params::Util::_CLASS
-sub _CLASS ($) {
+sub _CLASS {
 	(
 		defined $_[0]
 		and
@@ -463,4 +471,4 @@ sub _CLASS ($) {
 
 1;
 
-# Copyright 2008 - 2010 Adam Kennedy.
+# Copyright 2008 - 2012 Adam Kennedy.
